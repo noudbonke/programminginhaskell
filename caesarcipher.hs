@@ -1,10 +1,22 @@
 import Data.Char
 
+--10
+--modified to handle uppercase letters
+--NOTE: this can be done more efficiently using toLower, toUpper etc
+--but my goal was to use only what was taught so far in the book
+
+--modified for exercise 10
+--let2int :: Char -> Int 
+--let2int c = ord c - ord 'a'
 let2int :: Char -> Int 
-let2int c = ord c - ord 'a'
+let2int c = if isLower c then ord c - ord 'a' else ord c - ord 'A'
 
 int2let :: Int -> Char 
 int2let n = chr (ord 'a' + n)
+
+--added for exercise 10
+int2up :: Int -> Char 
+int2up n = chr (ord 'A' + n)
 
 lowers :: String -> Int
 lowers xs = length [x | x <- xs, x >= 'a' && x <= 'z']
@@ -17,6 +29,7 @@ positions x xs = [i | (x', i) <- zip xs [0..], x == x']
 
 shift :: Int -> Char -> Char 
 shift n c | isLower c = int2let ((let2int c + n) `mod` 26)
+          | isUpper c = int2up ((let2int c + n) `mod` 26) --added for exercise 10
           | otherwise = c
 
 encode :: Int -> String -> String

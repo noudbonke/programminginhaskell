@@ -18,8 +18,9 @@ int2let n = chr (ord 'a' + n)
 int2up :: Int -> Char 
 int2up n = chr (ord 'A' + n)
 
-lowers :: String -> Int
-lowers xs = length [x | x <- xs, x >= 'a' && x <= 'z']
+--modified for exercise 10
+letters :: String -> Int
+letters xs = length [x | x <- xs, (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z')]
 
 count :: Char -> String -> Int
 count x xs = length [x' | x' <- xs, x == x']
@@ -43,9 +44,10 @@ table = [8.1, 1.5, 2.8, 4.2, 12.7, 2.2, 2.0, 6.1, 7.0,
 percent :: Int -> Int -> Float
 percent n m = (fromIntegral n / fromIntegral m) * 100
 
+--modified for exercise 10
 freqs :: String -> [Float]
-freqs xs = [percent (count x xs) n | x <- ['a'..'z']]
-            where n = lowers xs 
+freqs xs = [percent ((count x xs) + (count y xs)) n | (x, y) <- zip ['a'..'z'] ['A'..'Z']]
+            where n = letters xs 
 
 chisqr :: [Float] -> [Float] -> Float
 chisqr os es = sum [((o-e)^2)/e | (o, e) <- zip os es]

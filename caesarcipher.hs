@@ -1,9 +1,6 @@
 import Data.Char
 
 --10
---modified to handle uppercase letters
---NOTE: this can be done more efficiently using toLower, toUpper etc
---but my goal was to use only what was taught so far in the book
 
 --modified for exercise 10
 --let2int :: Char -> Int 

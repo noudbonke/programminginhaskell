@@ -1,25 +1,54 @@
-main :: IO ()
-main = print (solutions [1, 3, 7, 10, 25, 50] 765)
+import Data.List
 
-data Op = Add | Sub | Mul | Div
+main :: IO ()
+--modified for exercise 4
+main = do 
+  print (solutions'' [1, 3, 7, 10, 25, 50] 765)
+  --print (length [e | cs <- choices [1, 3, 7, 10, 25, 50], e <- exprs cs]) 
+  --print (length [r | cs <- choices [1, 3, 7, 10, 25, 50], e <- exprs cs, r <- eval e]) 
+  print (nearestSolutions [1, 3, 7, 10, 25, 50] 831)
+
+--modified for exercise 6a 
+data Op = Add | Sub | Mul | Div | Exp
 
 instance Show Op where
   show Add = "+"
   show Sub = "-"
   show Mul = "*"
   show Div = "/"
-
+  --added for exercise 6a
+  show Exp = "^"
+{-
 valid :: Op -> Int -> Int -> Bool
 valid Add _ _ = True
 valid Sub x y = x > y
 valid Mul _ _ = True
 valid Div x y = x `mod` y == 0
+-}
+
+valid Add x y = x <= y
+valid Sub x y = x > y
+valid Mul x y = x /= 1 && y /= 1 && x <= y 
+valid Div x y = y /= 0 && y /= 1 && x `mod` y == 0
+--added for exercise 6a
+valid Exp x y = x >= 1 && y >= 1
+
+
+--added for exercise 5
+{-
+valid Add x y = True 
+valid Sub x y = True 
+valid Mul x y = True 
+valid Div x y = y /= 0 && x `mod` y == 0
+-}
 
 apply :: Op -> Int -> Int -> Int
 apply Add x y = x + y
 apply Sub x y = x - y
 apply Mul x y = x * y
 apply Div x y = x `div` y
+--added for exercise 6a
+apply Exp x y = x ^ y
 
 data Expr = Val Int | App Op Expr Expr
 
@@ -53,8 +82,24 @@ perms :: [a] -> [[a]]
 perms [] = [[]]
 perms (x:xs) = concat (map (interleave x) (perms xs)) 
 
+--modified for exercise 1
 choices :: [a] -> [[a]]
+{-
 choices = concat . map perms . subs
+-}
+choices xs = [zs | ys <- subs xs, zs <- perms ys]
+
+--added for exercise 2
+removeFirst :: Eq a => a -> [a] -> [a]
+removeFirst _ [] = []
+removeFirst x (y:ys) 
+  | x == y = ys
+  | otherwise = y : removeFirst x ys
+
+--added for exercise 2
+isChoice :: Eq a => [a] -> [a] -> Bool
+isChoice [] _ = True
+isChoice (x:xs) ys = x `elem` ys && isChoice xs (removeFirst x ys)
 
 solution :: Expr -> [Int] -> Int -> Bool 
 solution e ns n =
@@ -74,7 +119,7 @@ combine :: Expr -> Expr -> [Expr]
 combine l r = [App o l r | o <- ops]
 
 ops :: [Op]
-ops = [Add, Sub, Mul, Div]
+ops = [Add, Sub, Mul, Div, Exp]
 
 solutions :: [Int] -> Int -> [Expr]
 solutions ns n = [e | ns' <- choices ns, e <- exprs ns', eval e == [n]]
@@ -84,4 +129,21 @@ type Result = (Expr, Int)
 results :: [Int] -> [Result]
 results [] = []
 results [n] = [(Val n, n) | n > 0]
-results ns = [res | (ls, rs)]
+results ns = [res | (ls, rs) <- split ns, lx <- results ls, ry <- results rs, res <- combine' lx ry]
+
+combine' :: Result -> Result -> [Result]
+combine' (l, x) (r, y) =
+  [(App o l r, apply o x y) | o <- ops, valid o x y]
+
+solutions'' :: [Int] -> Int -> [Expr]
+solutions'' ns n = 
+  [e | ns' <- choices ns, (e, m) <- results ns', m == n]
+
+
+--added for exercise 6b
+--modified for exercise 6c
+nearestSolutions :: [Int] -> Int -> [Expr]
+nearestSolutions ns n =
+  sortOn (length . values)  (map snd (takeWhile (\x -> fst x == closest) allSolutions))
+  where allSolutions = sortOn fst [(abs(m-n), e) | ns' <- choices ns, (e, m) <- results ns'] 
+        closest = (fst . head) allSolutions

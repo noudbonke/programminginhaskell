@@ -28,11 +28,27 @@ putRow row num = do putStr (show row)
                     putStrLn (concat (replicate num "* "))
 
 putBoard :: Board -> IO ()
+{-
 putBoard [a,b,c,d,e] = do putRow 1 a
                           putRow 2 b
                           putRow 3 c
                           putRow 4 d
                           putRow 5 e
+-}
+
+--added for exercise 2
+{-
+putBoard = putBoard' 1
+
+putBoard' :: Int -> Board -> IO ()
+putBoard' r [] = return ()
+putBoard' r (x:xs) = do putRow r x 
+                        putBoard' (r+1) xs
+-}
+
+--added for exercise 2
+putBoard xs = sequence_ [putRow n x | (n,x) <- zip [1..] xs]
+
 
 getDigit :: String -> IO Int
 getDigit prompt = do putStr prompt

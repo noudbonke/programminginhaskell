@@ -1,17 +1,34 @@
 import Data.Char
 import Data.List
 import System.IO
+import System.Random hiding (next)
 
 size :: Int
 size = 3
 
+--added for exercise 4b
+winLine :: Int 
+winLine = 3
+
 depth :: Int
 depth = 9
 
+--modified for exercise 4a
+--modified for exercise 4c
 main :: IO ()
 main = do hSetBuffering stdout NoBuffering
-          play empty O
+          c <- playerChoice "Do you want to play First (F) or second (S)? "  
+          if c == "F" then play empty O (gametree empty O)
+          else play empty X (gametree empty X)
 
+--added for exercise 4a
+playerChoice :: String -> IO String 
+playerChoice prompt = do putStr prompt 
+                         c <- getLine
+                         if c /= [] && (c == "F" || c == "S") then return c 
+                         else do putStrLn "ERROR: invalid input" 
+                                 playerChoice prompt
+                  
 type Grid = [[Player]]
 
 data Player = O | B | X deriving (Eq, Ord, Show)
@@ -25,7 +42,7 @@ empty :: Grid
 empty = replicate size (replicate size B)
 
 full :: Grid -> Bool 
-full = all (/= B) . concat
+full = notElem B . concat
 
 turn :: Grid -> Player
 turn g = if os <= xs then O else X
@@ -34,8 +51,13 @@ turn g = if os <= xs then O else X
           xs = length (filter (==X) ps)
           ps = concat g
 
+--added for exercise 4b
+sublists :: [Player] -> [[Player]]
+sublists xs = [take winLine (drop n xs) | n <- [0..size-winLine]]
+
+--modified for exercise 4b
 wins :: Player -> Grid -> Bool 
-wins p g = any line (rows ++ cols ++ dias)
+wins p g = any line (concatMap sublists (rows ++ cols ++ dias))
            where
             line = all (==p)
             rows = g
@@ -157,20 +179,59 @@ bestmove g p = head [g' | Node (g',p') _ <- ts, p' == best]
                   tree = prune depth (gametree g p)
                   Node (_, best) ts = minimax tree 
 
-play :: Grid -> Player -> IO ()
-play g p = do cls
-              goto (1,1)
-              putGrid g 
-              play' g p
+--added for exercise 2
+bestmoves :: Grid -> Player -> [Grid] 
+bestmoves g p = [g' | Node (g',p') _ <- ts, p' == best]
+               where
+                  tree = prune depth (gametree g p)
+                  Node (_, best) ts = minimax tree 
 
-play' :: Grid -> Player -> IO ()
-play' g p | wins O g  = putStrLn "Player O wins!\n"
-          | wins X g  = putStrLn "Player X wins!\n"
-          | full g    = putStrLn "It's a draw!\n"
-          | p == O    = do i <- getNat (prompt p) 
-                           case move g i p of
-                              [] -> do putStrLn "ERROR: Invalid move"
-                                       play' g p
-                              [g'] -> play g' (next p)
-          | p == X    = do putStr "Player X is thinking... "
-                           (play $! (bestmove g p)) (next p)
+--added for exercise 3
+fastBestmove :: Grid -> Player -> Grid 
+fastBestmove g p = head [g'| Node (g',p') _ <- sortOn getDepth ts, p' == best]
+               where
+                  tree = prune depth (gametree g p)
+                  Node (_, best) ts = minimax tree 
+
+--added for exercise 4c
+searchBestmove :: Grid -> Player -> Tree Grid -> Grid
+searchBestmove g p (Node g' _) | g == g' = bestmove g p 
+searchBestmove g p (Node g' _) | g /= g' = [[]]
+searchBestmove g p (
+
+--modified for exercise 4c
+play :: Grid -> Player -> Tree Grid -> IO ()
+play g p t = do cls
+                goto (1,1)
+                putGrid g 
+                play' g p t
+
+--modified for exercise 4c
+play' :: Grid -> Player -> Tree Grid -> IO ()
+play' g p t  | wins O g  = putStrLn "Player O wins!\n"
+             | wins X g  = putStrLn "Player X wins!\n"
+             | full g    = putStrLn "It's a draw!\n"
+             | p == O    = do i <- getNat (prompt p) 
+                              case move g i p of
+                                 [] -> do putStrLn "ERROR: Invalid move"
+                                          play' g p t
+                                 [g'] -> play g' (next p) t
+             | p == X    = do putStr "Player X is thinking... "
+                              --added for exercise 2
+                              {-
+                              let gs = bestmoves g p
+                              n <- randomRIO (0, length gs - 1)
+                              play (gs !! n) (next p)
+                              -}
+                              --(play $! (bestmove g p)) (next p)
+                              --added for exercise 3
+                              (play $! (fastBestmove g p)) (next p) t
+
+--added for exercise 1
+getDepth :: Tree a -> Int
+getDepth (Node _ []) = 0
+getDepth (Node _ ts) = maximum (map getDepth ts) + 1  
+
+numNodes :: Tree a -> Int
+numNodes (Node _ []) = 1
+numNodes (Node _ ts) = sum (map numNodes ts) + 1   

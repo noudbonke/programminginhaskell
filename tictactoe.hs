@@ -201,6 +201,22 @@ minimax' p (Node g ts)
                      ts' = map (minimax' p) ts 
                      ps = [p | Node (_, p) _ <- ts']
 
+minimaxPrune :: Player -> Tree Grid -> Tree (Grid, Player)
+minimaxPrune p (Node g [])
+  | wins O g  = Node (g,O) []
+  | wins X g  = Node (g,X) []
+  | otherwise = Node (g,B) []
+minimaxPrune p (Node g (t:ts))
+  | turn'' == p' = Node (g, p') []
+  | null ts = minimaxPrune p t
+  | otherwise = Node (g, optimum turn'' ps) ts'
+  where
+    turn'' = turn' g p
+    Node (_, p') _ = minimaxPrune p t
+    optimum p = if p == O then minimum else maximum
+    ts' = map (minimaxPrune p) (t:ts)
+    ps = [p | Node (_, p) _ <- ts']
+
 bestmove :: Grid -> Player -> Grid 
 bestmove g p = head [g' | Node (g',p') _ <- ts, p' == best]
                where

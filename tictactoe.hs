@@ -1,7 +1,9 @@
+{-# LANGUAGE LambdaCase #-}
 import Data.Char
 import Data.List
 import System.IO
 import System.Random hiding (next)
+import GHC.Builtin.Names (int64TyConKey)
 
 size :: Int
 size = 3
@@ -18,8 +20,8 @@ depth = 9
 main :: IO ()
 main = do hSetBuffering stdout NoBuffering
           c <- playerChoice "Do you want to play First (F) or second (S)? "  
-          if c == "F" then play empty O (gametree empty O)
-          else play empty X (gametree empty X)
+          if c == "F" then play empty O (minimax' O (gametree empty O))
+          else play empty X (minimax' X (gametree empty X))
 
 --added for exercise 4a
 playerChoice :: String -> IO String 
@@ -46,6 +48,19 @@ full = notElem B . concat
 
 turn :: Grid -> Player
 turn g = if os <= xs then O else X
+         where 
+          os = length (filter (==O) ps)
+          xs = length (filter (==X) ps)
+          ps = concat g
+
+--additional input player who started
+turn' :: Grid -> Player -> Player
+turn' g O = if os <= xs then O else X
+         where 
+          os = length (filter (==O) ps)
+          xs = length (filter (==X) ps)
+          ps = concat g
+turn' g _ = if xs <= os then X else O  
          where 
           os = length (filter (==O) ps)
           xs = length (filter (==X) ps)
@@ -173,6 +188,19 @@ minimax (Node g ts)
                      ts' = map minimax ts
                      ps = [p | Node (_, p) _ <- ts']
 
+--added for exercise 4c
+minimax' :: Player -> Tree Grid -> Tree (Grid, Player)
+minimax' p (Node g []) 
+   | wins O g  = Node (g,O) []
+   | wins X g  = Node (g,X) []
+   | otherwise = Node (g,B) []
+minimax' p (Node g ts)
+   | turn' g p == O = Node (g, minimum ps) ts' 
+   | turn' g p == X = Node (g, maximum ps) ts' 
+                   where
+                     ts' = map (minimax' p) ts 
+                     ps = [p | Node (_, p) _ <- ts']
+
 bestmove :: Grid -> Player -> Grid 
 bestmove g p = head [g' | Node (g',p') _ <- ts, p' == best]
                where
@@ -193,21 +221,19 @@ fastBestmove g p = head [g'| Node (g',p') _ <- sortOn getDepth ts, p' == best]
                   tree = prune depth (gametree g p)
                   Node (_, best) ts = minimax tree 
 
---added for exercise 4c
-searchBestmove :: Grid -> Player -> Tree Grid -> Grid
-searchBestmove g p (Node g' _) | g == g' = bestmove g p 
-searchBestmove g p (Node g' _) | g /= g' = [[]]
-searchBestmove g p (
+searchBestmove :: Tree (Grid, Player) -> Grid
+searchBestmove (Node (g, p) ts)  = head [g' | (Node (g', p') _) <- ts, p' == p]
 
+--added for exercise 4c 
 --modified for exercise 4c
-play :: Grid -> Player -> Tree Grid -> IO ()
+play :: Grid -> Player -> Tree (Grid, Player) -> IO ()
 play g p t = do cls
                 goto (1,1)
                 putGrid g 
                 play' g p t
 
 --modified for exercise 4c
-play' :: Grid -> Player -> Tree Grid -> IO ()
+play' :: Grid -> Player -> Tree (Grid, Player) -> IO ()
 play' g p t  | wins O g  = putStrLn "Player O wins!\n"
              | wins X g  = putStrLn "Player X wins!\n"
              | full g    = putStrLn "It's a draw!\n"
@@ -215,7 +241,11 @@ play' g p t  | wins O g  = putStrLn "Player O wins!\n"
                               case move g i p of
                                  [] -> do putStrLn "ERROR: Invalid move"
                                           play' g p t
-                                 [g'] -> play g' (next p) t
+                                 [g'] -> play g' (next p) (head (filter (\case  
+                                                                     Node (m, _) _ | m == g' -> True
+                                                                     _ -> False) 
+                                                                     (sortOn getDepth ts)))
+                                                                        where Node (_, _) ts = t
              | p == X    = do putStr "Player X is thinking... "
                               --added for exercise 2
                               {-
@@ -225,7 +255,12 @@ play' g p t  | wins O g  = putStrLn "Player O wins!\n"
                               -}
                               --(play $! (bestmove g p)) (next p)
                               --added for exercise 3
-                              (play $! (fastBestmove g p)) (next p) t
+                              (play $! bm) (next p) (head (filter (\case  
+                                                                     Node (m, _) _ | m == bm -> True
+                                                                     _ -> False) 
+                                                                     (sortOn getDepth ts)))
+                                                                        where Node (_, _) ts = t
+                                                                              bm = searchBestmove t
 
 --added for exercise 1
 getDepth :: Tree a -> Int

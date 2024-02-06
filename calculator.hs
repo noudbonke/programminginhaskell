@@ -2,6 +2,7 @@ import Control.Applicative
 import Data.Char
 import System.IO
 import Parser
+import ArithExpr
 
 --from ch10
 cls :: IO ()
@@ -67,7 +68,7 @@ beep = putStr "\BEL"
 process :: Char -> String -> IO ()
 process c xs | c `elem` "qQ\ESC" = quit
              | c `elem` "dD\BS\DEL" = delete xs 
-             | c `elem` "=\n" = eval xs
+             | c `elem` "=\n" = Main.eval xs
              | c `elem` "cC" = clear
              | otherwise = press c xs
 
@@ -81,6 +82,9 @@ delete xs = calc (init xs)
 eval :: String -> IO ()
 eval xs = case parse expr xs of
             [(n, [])] -> calc (show n)
+            [(n, rest)] -> do beep
+                              calc (take m xs ++ ['!'] ++ drop m xs)
+                                where m = length xs - length rest
             _ -> do beep
                     calc xs
 

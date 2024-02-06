@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 import Control.Applicative
 import Data.Char
+import GHC.CmmToAsm.AArch64.Instr (x0)
 
 newtype Parser a = P (String -> [(a, String)])
 
@@ -74,3 +75,54 @@ alphanum = sat isAlphaNum
 
 char :: Char -> Parser Char
 char x = sat (== x)
+
+string :: String -> Parser String
+string [] = return []
+string (x:xs) = do char x 
+                   string xs
+                   return (x:xs)
+
+ident :: Parser String
+ident = do x <- lower
+           xs <- many alphanum
+           return (x:xs)
+
+nat :: Parser Int
+nat = do xs <- some digit
+         return (read xs)
+
+space :: Parser ()
+space = do many (sat isSpace)
+           return ()
+
+int :: Parser Int
+int = do char '-'
+         n <- nat
+         return (-n)
+      <|> nat
+
+token :: Parser a -> Parser a
+token p = do space
+             v <- p
+             space
+             return v
+
+identifier :: Parser String
+identifier = token ident
+
+natural :: Parser Int
+natural = token nat 
+
+integer :: Parser Int
+integer = token int
+
+symbol :: String -> Parser String
+symbol xs = token (string xs)
+
+nats :: Parser [Int]
+nats = do symbol "["
+          n <- natural 
+          ns <- many (do symbol ","
+                         natural)
+          symbol "]"
+          return (n:ns)

@@ -1,7 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
+module Parser where
+
 import Control.Applicative
 import Data.Char
-import GHC.CmmToAsm.AArch64.Instr (x0)
 
 newtype Parser a = P (String -> [(a, String)])
 

@@ -1,5 +1,3 @@
-import GHC.RTS.Flags (DebugFlags(stm), GCFlags (statsFile))
-import Data.ByteString (stripPrefix)
 --Exercise 1
 data Tree a = Leaf | Node (Tree a) a (Tree a)
               deriving Show
